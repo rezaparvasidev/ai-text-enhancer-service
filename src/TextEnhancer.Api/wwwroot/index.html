@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>AI Text Enhancer — Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --bg: #f4f6f9; --card: #ffffff; --ink: #1f2937; --muted: #6b7280;
+      --primary: #2563eb; --primary-hover: #1d4ed8;
+      --ok: #059669; --warn: #d97706; --err: #b91c1c; --line: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--ink); margin: 0;
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 24px; background: white; border-bottom: 1px solid var(--line);
+    }
+    header h1 { margin: 0; font-size: 1.1rem; }
+    header a { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+    header a:hover { color: var(--primary); }
+    main {
+      max-width: 980px; margin: 24px auto; padding: 0 24px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card); border-radius: 8px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--line);
+    }
+    .card h2 { margin: 0 0 12px 0; font-size: 1rem; }
+    textarea {
+      width: 100%; min-height: 140px; padding: 10px 12px; font-family: inherit;
+      font-size: 0.95rem; border: 1px solid #d1d5db; border-radius: 6px; resize: vertical;
+    }
+    .row { display: flex; gap: 8px; margin-top: 12px; }
+    button {
+      padding: 9px 16px; font-size: 0.9rem; border: 0; border-radius: 6px;
+      background: var(--primary); color: white; cursor: pointer; font-weight: 500;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: white; color: var(--ink); border: 1px solid #d1d5db; }
+    button.secondary:hover { background: #f9fafb; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    pre.result {
+      background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 6px;
+      white-space: pre-wrap; word-break: break-word; min-height: 80px;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.85rem;
+      margin: 12px 0 0 0;
+    }
+    .meta { display: flex; gap: 16px; font-size: 0.8rem; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
+    .meta b { color: var(--ink); font-weight: 500; }
+    .err-msg { color: var(--err); font-size: 0.85rem; margin-top: 10px; }
+    .history { grid-column: 1 / -1; }
+    .history table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .history th, .history td {
+      text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top;
+    }
+    .history th { color: var(--muted); font-weight: 500; }
+    .history td.input, .history td.output {
+      max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .history td.input:hover, .history td.output:hover { white-space: normal; word-break: break-word; }
+    .badge { padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; }
+    .badge.Success { background: #d1fae5; color: var(--ok); }
+    .badge.LlmError { background: #fee2e2; color: var(--err); }
+    .badge.PiiRejected { background: #fef3c7; color: var(--warn); }
+    .badge.ValidationError { background: #fef3c7; color: var(--warn); }
+    .pagination { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 0.85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI Text Enhancer</h1>
+    <div>
+      <a href="/swagger" target="_blank">Swagger</a>
+      &nbsp;·&nbsp;
+      <a href="#" id="logout">Logout</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Enhance a technician note</h2>
+      <textarea id="note" placeholder="e.g., arrived on site lawn was a mess weeds everywhere did full mow edging and cleanup customer seemed happy will need to come back for fertilizer app next week"></textarea>
+      <div class="row">
+        <button id="enhance">Enhance</button>
+        <button id="stream" class="secondary">Stream (SSE)</button>
+      </div>
+      <div id="error" class="err-msg" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>Result</h2>
+      <pre class="result" id="result">(submit a note to see the enhanced output)</pre>
+      <div class="meta" id="meta"></div>
+    </section>
+
+    <section class="card history">
+      <h2>Recent interactions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>When (UTC)</th>
+            <th>Status</th>
+            <th>Input</th>
+            <th>Output</th>
+            <th>Model</th>
+            <th>Tokens (in/out)</th>
+            <th>Latency</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+      <div class="pagination">
+        <button class="secondary" id="prev">← Prev</button>
+        <span id="page-label">page 1</span>
+        <button class="secondary" id="next">Next →</button>
+        <span id="total-label" style="margin-left:auto"></span>
+      </div>
+    </section>
+  </main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const noteEl = $('note'), resultEl = $('result'), metaEl = $('meta'), errEl = $('error');
+const enhanceBtn = $('enhance'), streamBtn = $('stream'), logoutLink = $('logout');
+const historyBody = $('history-body'), prevBtn = $('prev'), nextBtn = $('next');
+const pageLabel = $('page-label'), totalLabel = $('total-label');
+let page = 1, pageSize = 10, totalCount = 0;
+
+function showError(msg) { errEl.textContent = msg; errEl.hidden = !msg; }
+function setMeta(model, pIn, pOut, ms) {
+  metaEl.innerHTML = '';
+  const items = [
+    ['Model', model], ['Prompt tokens', pIn],
+    ['Completion tokens', pOut], ['Latency', ms + ' ms']
+  ];
+  for (const [k, v] of items) {
+    const span = document.createElement('span');
+    span.innerHTML = `${k}: <b>${v}</b>`;
+    metaEl.appendChild(span);
+  }
+}
+
+async function enhance() {
+  const note = noteEl.value.trim();
+  if (!note) { showError('Note is required.'); return; }
+  showError(''); enhanceBtn.disabled = true; streamBtn.disabled = true;
+  resultEl.textContent = '...'; metaEl.innerHTML = '';
+  try {
+    const r = await fetch('/api/enhance', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note })
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      showError(data.message || 'Request failed.');
+      resultEl.textContent = '(no output)';
+    } else {
+      resultEl.textContent = data.enhancedText;
+      setMeta(data.model, data.promptTokens, data.completionTokens, data.latencyMs);
+    }
+  } catch (e) { showError(e.message); }
+  finally { enhanceBtn.disabled = false; streamBtn.disabled = false; loadHistory(); }
+}
+
+async function streamEnhance() {
+  const note = noteEl.value.trim();
+  if (!note) { showError('Note is required.'); return; }
+  showError(''); enhanceBtn.disabled = true; streamBtn.disabled = true;
+  resultEl.textContent = ''; metaEl.innerHTML = '';
+  try {
+    const r = await fetch('/api/enhance/stream', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note })
+    });
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      showError(data.message || `HTTP ${r.status}`);
+      return;
+    }
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) !== -1) {
+        const event = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const lines = event.split('\n');
+        let evtName = 'message', dataStr = '';
+        for (const line of lines) {
+          if (line.startsWith('event:')) evtName = line.slice(6).trim();
+          else if (line.startsWith('data:')) dataStr = line.slice(5).trim();
+        }
+        if (!dataStr) continue;
+        const payload = JSON.parse(dataStr);
+        if (evtName === 'done') {
+          setMeta(payload.model, payload.promptTokens, payload.completionTokens, payload.latencyMs);
+        } else if (evtName === 'error') {
+          showError(payload.message || 'Stream failed.');
+        } else {
+          resultEl.textContent += payload.delta || '';
+        }
+      }
+    }
+  } catch (e) { showError(e.message); }
+  finally { enhanceBtn.disabled = false; streamBtn.disabled = false; loadHistory(); }
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch(`/api/history?page=${page}&pageSize=${pageSize}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    totalCount = data.totalCount;
+    historyBody.innerHTML = '';
+    for (const it of data.items) {
+      const tr = document.createElement('tr');
+      const when = new Date(it.createdUtc).toISOString().replace('T', ' ').slice(0, 19);
+      tr.innerHTML = `
+        <td>${when}</td>
+        <td><span class="badge ${it.status}">${it.status}</span></td>
+        <td class="input" title="${escapeHtml(it.inputText)}">${escapeHtml(it.inputText)}</td>
+        <td class="output" title="${escapeHtml(it.outputText || it.errorMessage || '')}">${escapeHtml(it.outputText || it.errorMessage || '')}</td>
+        <td>${escapeHtml(it.model)}</td>
+        <td>${it.promptTokens} / ${it.completionTokens}</td>
+        <td>${it.latencyMs} ms</td>
+      `;
+      historyBody.appendChild(tr);
+    }
+    pageLabel.textContent = `page ${data.page}`;
+    totalLabel.textContent = `${data.totalCount} total`;
+    prevBtn.disabled = data.page <= 1;
+    nextBtn.disabled = data.page * data.pageSize >= data.totalCount;
+  } catch (e) { /* silent */ }
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+enhanceBtn.addEventListener('click', enhance);
+streamBtn.addEventListener('click', streamEnhance);
+prevBtn.addEventListener('click', () => { if (page > 1) { page--; loadHistory(); } });
+nextBtn.addEventListener('click', () => { if (page * pageSize < totalCount) { page++; loadHistory(); } });
+logoutLink.addEventListener('click', async (e) => {
+  e.preventDefault();
+  await fetch('/logout', { method: 'POST' });
+  location.href = '/login';
+});
+
+loadHistory();
+</script>
+</body>
+</html>

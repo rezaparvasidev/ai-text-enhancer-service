@@ -1,0 +1,49 @@
+# ----- .NET build output -----
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+[Bb]ld/
+publish/
+*.zip
+*.nupkg
+
+# ----- IDE / editor -----
+.vs/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+
+# ----- Secrets / local config -----
+*.env
+.env
+secrets.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# ----- Runtime data -----
+# The committed sample DB lives at /data/interactions.db for reviewers.
+# The locally-running app writes to App_Data/ — that copy is per-developer and not committed.
+App_Data/
+*.db-shm
+*.db-wal
+
+# ----- OS noise -----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- Test output -----
+TestResults/
+*.trx
+coverage.*.xml

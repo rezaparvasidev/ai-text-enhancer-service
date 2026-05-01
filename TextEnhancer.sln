@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DF99D97C-9662-4ED4-9C94-469019E22F39}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextEnhancer.Api", "src\TextEnhancer.Api\TextEnhancer.Api.csproj", "{1E612C03-167B-4CFE-9D63-FD1244412867}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6056FDE8-5B36-448D-9EEB-A9419DA9AA0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextEnhancer.Tests", "tests\TextEnhancer.Tests\TextEnhancer.Tests.csproj", "{362804AE-473C-405C-9CD2-E83C2E36C32E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E612C03-167B-4CFE-9D63-FD1244412867}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E612C03-167B-4CFE-9D63-FD1244412867}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E612C03-167B-4CFE-9D63-FD1244412867}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E612C03-167B-4CFE-9D63-FD1244412867}.Release|Any CPU.Build.0 = Release|Any CPU
+		{362804AE-473C-405C-9CD2-E83C2E36C32E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{362804AE-473C-405C-9CD2-E83C2E36C32E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{362804AE-473C-405C-9CD2-E83C2E36C32E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{362804AE-473C-405C-9CD2-E83C2E36C32E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1E612C03-167B-4CFE-9D63-FD1244412867} = {DF99D97C-9662-4ED4-9C94-469019E22F39}
+		{362804AE-473C-405C-9CD2-E83C2E36C32E} = {6056FDE8-5B36-448D-9EEB-A9419DA9AA0B}
+	EndGlobalSection
+EndGlobal

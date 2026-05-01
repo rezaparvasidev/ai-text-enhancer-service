@@ -1,0 +1,69 @@
+name: Build, test, and deploy to Azure App Service
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: textenhancer-rezaparvasi
+  DOTNET_VERSION: '8.0.x'
+  PUBLISH_DIR: ./publish
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore TextEnhancer.sln
+
+      - name: Build
+        run: dotnet build TextEnhancer.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test TextEnhancer.sln --no-build -c Release --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+
+      - name: Publish
+        run: dotnet publish src/TextEnhancer.Api -c Release -o ${{ env.PUBLISH_DIR }} --no-build
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: ${{ env.PUBLISH_DIR }}
+
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
+
+    steps:
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+          path: ./publish
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
