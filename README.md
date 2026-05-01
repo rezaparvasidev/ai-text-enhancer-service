@@ -16,6 +16,9 @@ Built for the Granum LLC AI Engineer take-home assignment.
 - **GET `/api/history?page=&pageSize=`** — paginated audit log, newest first.
 - **PII guard** (bonus) — rejects notes containing emails / phone numbers / SSN-shaped strings
   *before* they reach the LLM, and still logs the rejection.
+- **Relevance guard** — a fast LLM-based classifier rejects inputs that aren't plausible
+  landscaping field-technician notes (chitchat, recipes, prompt-injection attempts), and the
+  rejection is logged with `status=OffTopicRejected`.
 - **Demo password gate** — interviewers receive a single password (env var `DEMO_PASSWORD`) and a
   cookie-based login page; everything else is gated behind it.
 - **Basic web UI** at `/` (bonus) — submit notes, view streamed output, browse history.
@@ -45,6 +48,7 @@ src/TextEnhancer.Api/
     AzureOpenAIChatCompletionClient.cs   the only file that imports the SDK
     TextEnhancementService.cs            orchestrates the LLM call + latency capture
     PiiGuard.cs                          regex-based PII detection
+    LlmRelevanceGuard.cs                 LLM-based off-topic input rejector
     InteractionLogger.cs                 writes to SQLite, never throws
   Endpoints/
     EnhanceEndpoints.cs            /api/enhance + /api/enhance/stream (SSE)

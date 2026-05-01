@@ -30,6 +30,7 @@ public static class EnhanceEndpoints
         EnhanceRequest? request,
         ITextEnhancementService enhancementService,
         IPiiGuard piiGuard,
+        IRelevanceGuard relevanceGuard,
         IInteractionLogger logger,
         IOptions<AzureOpenAIOptions> opts,
         ILoggerFactory loggerFactory,
@@ -57,6 +58,29 @@ public static class EnhanceEndpoints
             return Results.BadRequest(new ErrorResponse(
                 "pii_rejected",
                 $"Note appears to contain personally identifiable information ({detected}). Please remove it and resubmit."));
+        }
+
+        RelevanceResult relevance;
+        try
+        {
+            relevance = await relevanceGuard.CheckAsync(note, ct);
+        }
+        catch (Exception ex)
+        {
+            endpointLog.LogError(ex, "Relevance classifier call failed.");
+            await logger.LogAsync(note, null, modelLabel, 0, 0, 0,
+                InteractionStatus.LlmError, $"Relevance classifier failed: {ex.Message}", ct);
+            return Results.Json(
+                new ErrorResponse("llm_error", "The enhancement service is currently unavailable. Please try again."),
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        if (!relevance.IsRelevant)
+        {
+            await logger.LogAsync(note, null, modelLabel, 0, 0, 0,
+                InteractionStatus.OffTopicRejected, $"Off-topic: {relevance.Reason}", ct);
+            return Results.BadRequest(new ErrorResponse(
+                "off_topic_rejected",
+                "This input does not look like a landscaping field-technician note. Please paste a job report describing work performed at a customer site."));
         }
 
         try
@@ -89,6 +113,7 @@ public static class EnhanceEndpoints
         EnhanceRequest? request,
         ITextEnhancementService enhancementService,
         IPiiGuard piiGuard,
+        IRelevanceGuard relevanceGuard,
         IInteractionLogger logger,
         IOptions<AzureOpenAIOptions> opts,
         ILoggerFactory loggerFactory,
@@ -119,6 +144,32 @@ public static class EnhanceEndpoints
             await http.Response.WriteAsJsonAsync(new ErrorResponse(
                 "pii_rejected",
                 $"Note appears to contain personally identifiable information ({detected})."), ct);
+            return;
+        }
+
+        RelevanceResult relevance;
+        try
+        {
+            relevance = await relevanceGuard.CheckAsync(note, ct);
+        }
+        catch (Exception ex)
+        {
+            endpointLog.LogError(ex, "Relevance classifier call failed.");
+            await logger.LogAsync(note, null, modelLabel, 0, 0, 0,
+                InteractionStatus.LlmError, $"Relevance classifier failed: {ex.Message}", ct);
+            http.Response.StatusCode = StatusCodes.Status502BadGateway;
+            await http.Response.WriteAsJsonAsync(new ErrorResponse(
+                "llm_error", "The enhancement service is currently unavailable. Please try again."), ct);
+            return;
+        }
+        if (!relevance.IsRelevant)
+        {
+            await logger.LogAsync(note, null, modelLabel, 0, 0, 0,
+                InteractionStatus.OffTopicRejected, $"Off-topic: {relevance.Reason}", ct);
+            http.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await http.Response.WriteAsJsonAsync(new ErrorResponse(
+                "off_topic_rejected",
+                "This input does not look like a landscaping field-technician note. Please paste a job report describing work performed at a customer site."), ct);
             return;
         }
 

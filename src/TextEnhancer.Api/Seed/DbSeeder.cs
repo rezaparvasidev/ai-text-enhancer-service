@@ -76,6 +76,16 @@ public static class DbSeeder
                 Model = "gpt-4o",
                 PromptTokens = 405, CompletionTokens = 55, LatencyMs = 1714,
                 Status = InteractionStatus.Success
+            },
+            new Interaction
+            {
+                CreatedUtc = now.AddMinutes(-1),
+                InputText = "what is the capital of france",
+                OutputText = null,
+                Model = "gpt-4o",
+                PromptTokens = 142, CompletionTokens = 12, LatencyMs = 318,
+                Status = InteractionStatus.OffTopicRejected,
+                ErrorMessage = "Off-topic: General-knowledge question, not a landscaping job note."
             }
         };
 

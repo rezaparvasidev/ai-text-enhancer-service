@@ -28,6 +28,7 @@ builder.Services.AddSingleton<IChatCompletionClient, AzureOpenAIChatCompletionCl
 builder.Services.AddScoped<ITextEnhancementService, TextEnhancementService>();
 builder.Services.AddScoped<IInteractionLogger, InteractionLogger>();
 builder.Services.AddSingleton<IPiiGuard, PiiGuard>();
+builder.Services.AddScoped<IRelevanceGuard, LlmRelevanceGuard>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

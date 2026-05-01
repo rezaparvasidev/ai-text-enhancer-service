@@ -90,6 +90,38 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
     }
 
     [Fact]
+    public async Task OffTopicNote_Returns400_AndLogsOffTopicRejected()
+    {
+        // Make the classifier reject; enhancement handler shouldn't even be called.
+        _factory.FakeChat.CompleteHandler = (sys, _) =>
+            sys.Contains("relevance classifier", StringComparison.OrdinalIgnoreCase)
+                ? new ChatCompletionResult("IRRELEVANT: this is a recipe, not a job note", 30, 10, "gpt-4o-test")
+                : throw new Xunit.Sdk.XunitException("Enhancement should not be invoked when classifier rejects.");
+
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhance",
+            new { note = "to make pasta carbonara, beat eggs with pecorino..." });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("off_topic_rejected", error!.Code);
+
+        await AssertLastInteractionAsync(i =>
+        {
+            Assert.Equal(InteractionStatus.OffTopicRejected, i.Status);
+            Assert.Contains("recipe", i.ErrorMessage);
+            Assert.Null(i.OutputText);
+        });
+
+        // restore default
+        _factory.FakeChat.CompleteHandler = (sys, _) =>
+            sys.Contains("relevance classifier", StringComparison.OrdinalIgnoreCase)
+                ? new ChatCompletionResult("RELEVANT: looks like a landscaping job note", 30, 8, "gpt-4o-test")
+                : new ChatCompletionResult("- enhanced output", 10, 5, "gpt-4o-test");
+    }
+
+    [Fact]
     public async Task LlmFailure_Returns502_AndLogsError()
     {
         _factory.FakeChat.CompleteHandler = (_, _) =>

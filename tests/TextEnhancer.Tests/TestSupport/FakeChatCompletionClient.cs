@@ -9,8 +9,15 @@ namespace TextEnhancer.Tests.TestSupport;
 /// </summary>
 public class FakeChatCompletionClient : IChatCompletionClient
 {
+    /// <summary>
+    /// Default handler routes by system prompt: relevance classifier calls (which use the
+    /// "RELEVANT:/IRRELEVANT:" output contract) get a RELEVANT response; everything else gets
+    /// the canned enhancement output. Tests override this to simulate failures or rejections.
+    /// </summary>
     public Func<string, string, ChatCompletionResult> CompleteHandler { get; set; }
-        = (_, _) => new ChatCompletionResult("- enhanced output", 10, 5, "gpt-4o-test");
+        = (sys, _) => sys.Contains("relevance classifier", StringComparison.OrdinalIgnoreCase)
+            ? new ChatCompletionResult("RELEVANT: looks like a landscaping job note", 30, 8, "gpt-4o-test")
+            : new ChatCompletionResult("- enhanced output", 10, 5, "gpt-4o-test");
 
     public Func<string, string, IEnumerable<ChatStreamChunk>> StreamHandler { get; set; }
         = (_, _) => new[]
