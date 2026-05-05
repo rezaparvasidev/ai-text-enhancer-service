@@ -23,6 +23,9 @@ public static class DbSeeder
                 InputText = "arrived on site lawn was a mess weeds everywhere did full mow edging and cleanup customer seemed happy will need to come back for fertilizer app next week",
                 OutputText =
                     "Work completed:\n- Full mow\n- Edging\n- Debris cleanup\n\nSite observations:\n- Lawn was overgrown with widespread weeds\n\nOutcome / Follow-up:\n- Customer seemed happy\n- Fertilizer application next week",
+                EnhancedSectionsJson = """
+                    {"workCompleted":["Full mow","Edging","Debris cleanup"],"siteObservations":["Lawn was overgrown with widespread weeds"],"materialsEquipment":[],"outcomeFollowUp":["Customer seemed happy","Fertilizer application next week"]}
+                    """,
                 Model = "gpt-4o",
                 PromptTokens = 412, CompletionTokens = 78, LatencyMs = 1834,
                 Status = InteractionStatus.Success
@@ -33,6 +36,9 @@ public static class DbSeeder
                 InputText = "trimmed hedges along east side of property hauled away three bags of clippings replaced one broken sprinkler head zone 4",
                 OutputText =
                     "Work completed:\n- Trimmed hedges along east side of property\n- Hauled away three bags of clippings\n- Replaced one broken sprinkler head in zone 4",
+                EnhancedSectionsJson = """
+                    {"workCompleted":["Trimmed hedges along east side of property","Hauled away three bags of clippings","Replaced one broken sprinkler head in zone 4"],"siteObservations":[],"materialsEquipment":[],"outcomeFollowUp":[]}
+                    """,
                 Model = "gpt-4o",
                 PromptTokens = 398, CompletionTokens = 52, LatencyMs = 1601,
                 Status = InteractionStatus.Success
@@ -43,6 +49,9 @@ public static class DbSeeder
                 InputText = "fertilizer app done 50 lbs of slow release on front and back lawns watered in noticed grub damage near oak tree recommended treatment",
                 OutputText =
                     "Work completed:\n- Applied 50 lbs of slow-release fertilizer to front and back lawns\n- Watered in fertilizer\n\nSite observations:\n- Noticed grub damage near oak tree\n\nOutcome / Follow-up:\n- Recommended treatment for grub damage",
+                EnhancedSectionsJson = """
+                    {"workCompleted":["Applied 50 lbs of slow-release fertilizer to front and back lawns","Watered in fertilizer"],"siteObservations":["Noticed grub damage near oak tree"],"materialsEquipment":["50 lbs of slow-release fertilizer"],"outcomeFollowUp":["Recommended treatment for grub damage"]}
+                    """,
                 Model = "gpt-4o",
                 PromptTokens = 410, CompletionTokens = 65, LatencyMs = 1922,
                 Status = InteractionStatus.Success
@@ -73,6 +82,9 @@ public static class DbSeeder
                 InputText = "spring cleanup done removed leaves from gutters and beds aerated front lawn customer wants quote for mulching",
                 OutputText =
                     "Work completed:\n- Spring cleanup\n- Removed leaves from gutters and beds\n- Aerated front lawn\n\nOutcome / Follow-up:\n- Customer wants a quote for mulching",
+                EnhancedSectionsJson = """
+                    {"workCompleted":["Spring cleanup","Removed leaves from gutters and beds","Aerated front lawn"],"siteObservations":[],"materialsEquipment":[],"outcomeFollowUp":["Customer wants a quote for mulching"]}
+                    """,
                 Model = "gpt-4o",
                 PromptTokens = 405, CompletionTokens = 55, LatencyMs = 1714,
                 Status = InteractionStatus.Success

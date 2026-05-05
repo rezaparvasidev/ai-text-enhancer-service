@@ -5,6 +5,7 @@ public record HistoryItem(
     DateTime CreatedUtc,
     string InputText,
     string? OutputText,
+    EnhancedNote? EnhancedSections,
     string Model,
     int PromptTokens,
     int CompletionTokens,

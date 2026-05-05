@@ -39,13 +39,40 @@ public class AzureOpenAIChatCompletionClient : IChatCompletionClient
         };
 
         var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: ct);
-        var completion = response.Value;
+        return ToResult(response.Value);
+    }
 
+    public async Task<ChatCompletionResult> CompleteStructuredAsync(
+        string systemPrompt,
+        string userInput,
+        string schemaName,
+        string jsonSchema,
+        CancellationToken ct)
+    {
+        var messages = new ChatMessage[]
+        {
+            new SystemChatMessage(systemPrompt),
+            new UserChatMessage(userInput)
+        };
+
+        var options = new ChatCompletionOptions
+        {
+            ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+                jsonSchemaFormatName: schemaName,
+                jsonSchema: BinaryData.FromString(jsonSchema),
+                jsonSchemaIsStrict: true)
+        };
+
+        var response = await _chatClient.CompleteChatAsync(messages, options, ct);
+        return ToResult(response.Value);
+    }
+
+    private ChatCompletionResult ToResult(ChatCompletion completion)
+    {
         var text = completion.Content.Count > 0 ? completion.Content[0].Text : string.Empty;
         var prompt = completion.Usage?.InputTokenCount ?? 0;
         var output = completion.Usage?.OutputTokenCount ?? 0;
         var model = string.IsNullOrEmpty(completion.Model) ? _deployment : completion.Model;
-
         return new ChatCompletionResult(text, prompt, output, model);
     }
 

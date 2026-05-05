@@ -30,8 +30,10 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
     [Fact]
     public async Task ValidNote_Returns200_AndLogsSuccess()
     {
-        _factory.FakeChat.CompleteHandler = (_, _) =>
-            new ChatCompletionResult("- bullet a\n- bullet b", 120, 30, "gpt-4o-test");
+        const string sectionsJson =
+            """{"workCompleted":["Mowed","Edged"],"siteObservations":[],"materialsEquipment":[],"outcomeFollowUp":["Return next week"]}""";
+        _factory.FakeChat.CompleteStructuredHandler = (_, _) =>
+            new ChatCompletionResult(sectionsJson, 120, 30, "gpt-4o-test");
         var client = _factory.CreateAuthenticatedClient();
 
         var response = await client.PostAsJsonAsync("/api/enhance", new { note = "raw technician note" });
@@ -39,7 +41,11 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<EnhanceResponse>();
         Assert.NotNull(body);
-        Assert.Equal("- bullet a\n- bullet b", body!.EnhancedText);
+        Assert.Contains("Work completed:", body!.EnhancedText);
+        Assert.Contains("- Mowed", body.EnhancedText);
+        Assert.NotNull(body.EnhancedSections);
+        Assert.Equal(new[] { "Mowed", "Edged" }, body.EnhancedSections!.WorkCompleted);
+        Assert.Equal(new[] { "Return next week" }, body.EnhancedSections.OutcomeFollowUp);
         Assert.Equal("gpt-4o-test", body.Model);
         Assert.Equal(120, body.PromptTokens);
         Assert.Equal(30, body.CompletionTokens);
@@ -49,7 +55,9 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
         {
             Assert.Equal(InteractionStatus.Success, i.Status);
             Assert.Equal("raw technician note", i.InputText);
-            Assert.Equal("- bullet a\n- bullet b", i.OutputText);
+            Assert.Contains("- Mowed", i.OutputText);
+            Assert.NotNull(i.EnhancedSectionsJson);
+            Assert.Contains("Mowed", i.EnhancedSectionsJson);
             Assert.Equal(120, i.PromptTokens);
         });
     }
@@ -96,7 +104,9 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
         _factory.FakeChat.CompleteHandler = (sys, _) =>
             sys.Contains("relevance classifier", StringComparison.OrdinalIgnoreCase)
                 ? new ChatCompletionResult("IRRELEVANT: this is a recipe, not a job note", 30, 10, "gpt-4o-test")
-                : throw new Xunit.Sdk.XunitException("Enhancement should not be invoked when classifier rejects.");
+                : throw new Xunit.Sdk.XunitException("Plain enhancement should not be invoked when classifier rejects.");
+        _factory.FakeChat.CompleteStructuredHandler = (_, _) =>
+            throw new Xunit.Sdk.XunitException("Structured enhancement should not be invoked when classifier rejects.");
 
         var client = _factory.CreateAuthenticatedClient();
 
@@ -112,19 +122,24 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
             Assert.Equal(InteractionStatus.OffTopicRejected, i.Status);
             Assert.Contains("recipe", i.ErrorMessage);
             Assert.Null(i.OutputText);
+            Assert.Null(i.EnhancedSectionsJson);
         });
 
-        // restore default
+        // restore defaults so other tests in this fixture aren't affected
         _factory.FakeChat.CompleteHandler = (sys, _) =>
             sys.Contains("relevance classifier", StringComparison.OrdinalIgnoreCase)
                 ? new ChatCompletionResult("RELEVANT: looks like a landscaping job note", 30, 8, "gpt-4o-test")
                 : new ChatCompletionResult("- enhanced output", 10, 5, "gpt-4o-test");
+        _factory.FakeChat.CompleteStructuredHandler = (_, _) =>
+            new ChatCompletionResult(
+                """{"workCompleted":["enhanced output"],"siteObservations":[],"materialsEquipment":[],"outcomeFollowUp":[]}""",
+                10, 5, "gpt-4o-test");
     }
 
     [Fact]
     public async Task LlmFailure_Returns502_AndLogsError()
     {
-        _factory.FakeChat.CompleteHandler = (_, _) =>
+        _factory.FakeChat.CompleteStructuredHandler = (_, _) =>
             throw new InvalidOperationException("simulated AOAI 503");
         var client = _factory.CreateAuthenticatedClient();
 
@@ -140,11 +155,14 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
             Assert.Equal(InteractionStatus.LlmError, i.Status);
             Assert.Contains("simulated AOAI 503", i.ErrorMessage);
             Assert.Null(i.OutputText);
+            Assert.Null(i.EnhancedSectionsJson);
         });
 
         // restore handler so other tests in this fixture aren't affected
-        _factory.FakeChat.CompleteHandler = (_, _) =>
-            new ChatCompletionResult("- enhanced output", 10, 5, "gpt-4o-test");
+        _factory.FakeChat.CompleteStructuredHandler = (_, _) =>
+            new ChatCompletionResult(
+                """{"workCompleted":["enhanced output"],"siteObservations":[],"materialsEquipment":[],"outcomeFollowUp":[]}""",
+                10, 5, "gpt-4o-test");
     }
 
     [Fact]
@@ -152,8 +170,8 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
     {
         _factory.FakeChat.StreamHandler = (_, _) => new[]
         {
-            new ChatStreamChunk("- alpha", IsFinished: false),
-            new ChatStreamChunk(" beta", IsFinished: false),
+            new ChatStreamChunk("Work completed:\n- alpha\n", IsFinished: false),
+            new ChatStreamChunk("- beta\n\nOutcome / Follow-up:\n- gamma", IsFinished: false),
             new ChatStreamChunk(string.Empty, IsFinished: true,
                 PromptTokens: 12, CompletionTokens: 4, Model: "gpt-4o-test")
         };
@@ -171,16 +189,19 @@ public class EnhanceEndpointTests : IClassFixture<TextEnhancerWebAppFactory>
 
         var body = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("data: {\"delta\":\"- alpha\"}", body);
-        Assert.Contains("data: {\"delta\":\" beta\"}", body);
+        Assert.Contains("\"delta\":\"Work completed", body);
         Assert.Contains("event: done", body);
         Assert.Contains("\"promptTokens\":12", body);
 
         await AssertLastInteractionAsync(i =>
         {
             Assert.Equal(InteractionStatus.Success, i.Status);
-            Assert.Equal("- alpha beta", i.OutputText);
+            Assert.Contains("- alpha", i.OutputText);
+            Assert.Contains("- gamma", i.OutputText);
             Assert.Equal(12, i.PromptTokens);
+            Assert.NotNull(i.EnhancedSectionsJson);
+            Assert.Contains("alpha", i.EnhancedSectionsJson);
+            Assert.Contains("gamma", i.EnhancedSectionsJson);
         });
     }
 

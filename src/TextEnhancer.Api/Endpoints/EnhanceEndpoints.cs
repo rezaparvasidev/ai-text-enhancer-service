@@ -10,6 +10,11 @@ namespace TextEnhancer.Api.Endpoints;
 
 public static class EnhanceEndpoints
 {
+    private static readonly JsonSerializerOptions SectionsJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public static IEndpointRouteBuilder MapEnhanceEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/enhance", HandleEnhance)
@@ -86,12 +91,14 @@ public static class EnhanceEndpoints
         try
         {
             var result = await enhancementService.EnhanceAsync(note, ct);
+            var sectionsJson = JsonSerializer.Serialize(result.Sections, SectionsJsonOptions);
             await logger.LogAsync(note, result.EnhancedText, result.Model,
                 result.PromptTokens, result.CompletionTokens, result.LatencyMs,
-                InteractionStatus.Success, null, ct);
+                InteractionStatus.Success, null, ct, sectionsJson);
 
             return Results.Ok(new EnhanceResponse(
                 result.EnhancedText,
+                result.Sections,
                 result.Model,
                 result.PromptTokens,
                 result.CompletionTokens,
@@ -214,9 +221,12 @@ public static class EnhanceEndpoints
             }
 
             if (sw.IsRunning) sw.Stop();
-            await logger.LogAsync(note, collected.ToString(), modelUsed,
+            var streamedText = collected.ToString();
+            var streamedSections = EnhancedNoteFormatter.ParseFromBulletText(streamedText);
+            var streamedSectionsJson = JsonSerializer.Serialize(streamedSections, SectionsJsonOptions);
+            await logger.LogAsync(note, streamedText, modelUsed,
                 promptTokens, completionTokens, sw.ElapsedMilliseconds,
-                InteractionStatus.Success, null, ct);
+                InteractionStatus.Success, null, ct, streamedSectionsJson);
         }
         catch (Exception ex)
         {

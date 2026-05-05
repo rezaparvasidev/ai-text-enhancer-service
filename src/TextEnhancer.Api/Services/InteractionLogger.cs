@@ -22,7 +22,8 @@ public class InteractionLogger : IInteractionLogger
         long latencyMs,
         InteractionStatus status,
         string? errorMessage,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? enhancedSectionsJson = null)
     {
         try
         {
@@ -36,7 +37,8 @@ public class InteractionLogger : IInteractionLogger
                 CompletionTokens = completionTokens,
                 LatencyMs = latencyMs,
                 Status = status,
-                ErrorMessage = errorMessage
+                ErrorMessage = errorMessage,
+                EnhancedSectionsJson = enhancedSectionsJson
             });
             await _db.SaveChangesAsync(ct);
         }

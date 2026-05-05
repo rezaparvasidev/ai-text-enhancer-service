@@ -13,5 +13,6 @@ public interface IInteractionLogger
         long latencyMs,
         InteractionStatus status,
         string? errorMessage,
-        CancellationToken ct);
+        CancellationToken ct,
+        string? enhancedSectionsJson = null);
 }

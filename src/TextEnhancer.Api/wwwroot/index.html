@@ -55,15 +55,20 @@
     .meta b { color: var(--ink); font-weight: 500; }
     .err-msg { color: var(--err); font-size: 0.85rem; margin-top: 10px; }
     .history { grid-column: 1 / -1; }
+    .history .table-wrap { overflow-x: auto; }
     .history table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .history th, .history td {
       text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top;
     }
-    .history th { color: var(--muted); font-weight: 500; }
+    .history th { color: var(--muted); font-weight: 500; white-space: nowrap; }
     .history td.input, .history td.output {
-      max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .history td.input:hover, .history td.output:hover { white-space: normal; word-break: break-word; }
+    .history td.sections { min-width: 160px; max-width: 200px; }
+    .history td.sections ul { margin: 0; padding-left: 16px; }
+    .history td.sections li { margin: 0 0 2px 0; line-height: 1.35; }
+    .history td.sections .empty { color: var(--muted); }
     .badge { padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; }
     .badge.Success { background: #d1fae5; color: var(--ok); }
     .badge.LlmError { background: #fee2e2; color: var(--err); }
@@ -102,20 +107,24 @@
 
     <section class="card history">
       <h2>Recent interactions</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>When (UTC)</th>
-            <th>Status</th>
-            <th>Input</th>
-            <th>Output</th>
-            <th>Model</th>
-            <th>Tokens (in/out)</th>
-            <th>Latency</th>
-          </tr>
-        </thead>
-        <tbody id="history-body"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>When (UTC)</th>
+              <th>Status</th>
+              <th>Input</th>
+              <th>Output</th>
+              <th>Work completed</th>
+              <th>Outcome / Follow-up</th>
+              <th>Model</th>
+              <th>Tokens (in/out)</th>
+              <th>Latency</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
       <div class="pagination">
         <button class="secondary" id="prev">← Prev</button>
         <span id="page-label">page 1</span>
@@ -225,11 +234,15 @@ async function loadHistory() {
     for (const it of data.items) {
       const tr = document.createElement('tr');
       const when = new Date(it.createdUtc).toISOString().replace('T', ' ').slice(0, 19);
+      const work = renderBullets(it.enhancedSections?.workCompleted);
+      const outcome = renderBullets(it.enhancedSections?.outcomeFollowUp);
       tr.innerHTML = `
         <td>${when}</td>
         <td><span class="badge ${it.status}">${it.status}</span></td>
         <td class="input" title="${escapeHtml(it.inputText)}">${escapeHtml(it.inputText)}</td>
         <td class="output" title="${escapeHtml(it.outputText || it.errorMessage || '')}">${escapeHtml(it.outputText || it.errorMessage || '')}</td>
+        <td class="sections">${work}</td>
+        <td class="sections">${outcome}</td>
         <td>${escapeHtml(it.model)}</td>
         <td>${it.promptTokens} / ${it.completionTokens}</td>
         <td>${it.latencyMs} ms</td>
@@ -245,6 +258,11 @@ async function loadHistory() {
 
 function escapeHtml(s) {
   return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderBullets(items) {
+  if (!Array.isArray(items) || items.length === 0) return '<span class="empty">—</span>';
+  return '<ul>' + items.map(s => `<li>${escapeHtml(s)}</li>`).join('') + '</ul>';
 }
 
 enhanceBtn.addEventListener('click', enhance);

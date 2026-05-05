@@ -19,6 +19,15 @@ public class FakeChatCompletionClient : IChatCompletionClient
             ? new ChatCompletionResult("RELEVANT: looks like a landscaping job note", 30, 8, "gpt-4o-test")
             : new ChatCompletionResult("- enhanced output", 10, 5, "gpt-4o-test");
 
+    /// <summary>
+    /// Default handler returns a canned structured enhancement payload. Tests override this when
+    /// they need to simulate specific section content or LLM failures on the enhancement path.
+    /// </summary>
+    public Func<string, string, ChatCompletionResult> CompleteStructuredHandler { get; set; }
+        = (_, _) => new ChatCompletionResult(
+            """{"workCompleted":["enhanced output"],"siteObservations":[],"materialsEquipment":[],"outcomeFollowUp":[]}""",
+            10, 5, "gpt-4o-test");
+
     public Func<string, string, IEnumerable<ChatStreamChunk>> StreamHandler { get; set; }
         = (_, _) => new[]
         {
@@ -30,6 +39,14 @@ public class FakeChatCompletionClient : IChatCompletionClient
 
     public Task<ChatCompletionResult> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct)
         => Task.FromResult(CompleteHandler(systemPrompt, userInput));
+
+    public Task<ChatCompletionResult> CompleteStructuredAsync(
+        string systemPrompt,
+        string userInput,
+        string schemaName,
+        string jsonSchema,
+        CancellationToken ct)
+        => Task.FromResult(CompleteStructuredHandler(systemPrompt, userInput));
 
     public async IAsyncEnumerable<ChatStreamChunk> StreamAsync(
         string systemPrompt,

@@ -21,4 +21,6 @@ public class Interaction
     public InteractionStatus Status { get; set; }
 
     public string? ErrorMessage { get; set; }
+
+    public string? EnhancedSectionsJson { get; set; }
 }

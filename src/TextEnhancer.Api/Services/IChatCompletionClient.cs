@@ -21,5 +21,17 @@ public interface IChatCompletionClient
 {
     Task<ChatCompletionResult> CompleteAsync(string systemPrompt, string userInput, CancellationToken ct);
 
+    /// <summary>
+    /// Calls the model with Azure OpenAI Structured Outputs. <paramref name="jsonSchema"/> must be a
+    /// JSON Schema (object form). The response is guaranteed to be a JSON document conforming to
+    /// that schema; the caller deserializes <see cref="ChatCompletionResult.Text"/> into its DTO.
+    /// </summary>
+    Task<ChatCompletionResult> CompleteStructuredAsync(
+        string systemPrompt,
+        string userInput,
+        string schemaName,
+        string jsonSchema,
+        CancellationToken ct);
+
     IAsyncEnumerable<ChatStreamChunk> StreamAsync(string systemPrompt, string userInput, CancellationToken ct);
 }
