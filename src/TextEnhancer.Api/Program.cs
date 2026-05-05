@@ -49,6 +49,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+    SqliteSchemaPatch.Apply(db);
     if (!app.Environment.IsEnvironment("Testing"))
     {
         await DbSeeder.SeedIfEmptyAsync(db, CancellationToken.None);
