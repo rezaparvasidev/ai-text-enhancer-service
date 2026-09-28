@@ -12,7 +12,7 @@ permissions:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  RESOURCE_GROUP: rg-rezaparvasi
+  RESOURCE_GROUP: rg-textenhancer-prod
   CONTAINER_APP_NAME: textenhancer
   IMAGE: ghcr.io/rezaparvasidev/textenhancer
 
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://textenhancer.victoriousbush-871e8768.eastus.azurecontainerapps.io
+      url: https://textenhancer.redground-26882df3.eastus.azurecontainerapps.io
 
     steps:
       - uses: actions/checkout@v4
